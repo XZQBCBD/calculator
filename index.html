@@ -7,6 +7,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="成本核算">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <title>自定义类目成本核算</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233b82f6'/%3E%3Ctext x='16' y='23' font-size='19' font-family='sans-serif' font-weight='700' fill='white' text-anchor='middle'%3E%C2%A5%3C/text%3E%3C/svg%3E">
   <style>
@@ -178,6 +181,80 @@
       font-weight: 700; font-size: 19px; color: var(--accent);
       letter-spacing: -.3px;
     }
+    /* ===== v2 新增样式 ===== */
+    .warn-btn { color: #b45309; border-color: #fde68a; background: #fffbeb; }
+    .warn-btn:hover { background: #fef3c7; border-color: #fcd34d; color: #92400e; }
+    #undo-btn:disabled { opacity: .45; cursor: not-allowed; }
+    #undo-btn:disabled:hover { background: var(--card); border-color: var(--border); }
+    .search-bar {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 0 12px; margin-bottom: 14px;
+      transition: border-color .16s, box-shadow .16s;
+    }
+    .search-bar:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+    .search-icon { font-size: 13px; opacity: .55; flex: none; }
+    #search-input {
+      flex: 1; border: none; background: transparent; padding: 10px 0;
+      font-size: 13.5px; text-align: left; outline: none; box-shadow: none;
+    }
+    #search-input:focus { background: transparent; box-shadow: none; }
+    #search-input::-webkit-search-cancel-button { cursor: pointer; }
+    .search-info {
+      font-size: 12px; color: var(--accent); font-weight: 600;
+      background: var(--accent-soft); border-radius: 999px; padding: 2px 9px; flex: none;
+    }
+    /* 锁定字段：默认只读，点一下解锁 */
+    td.cell-lock input[readonly] {
+      color: var(--text-body); cursor: pointer;
+      background: transparent;
+    }
+    td.cell-lock input[readonly]:hover { background: #f8fafc; }
+    td.cell-lock.unlocked input {
+      background: #fffbeb; box-shadow: inset 0 -2px 0 #f59e0b;
+      cursor: text;
+    }
+    td.cell-lock.unlocked::after {
+      content: "编辑中"; position: absolute; right: 6px; top: 2px;
+      font-size: 9px; color: #b45309; font-weight: 600;
+    }
+    td.cell-lock { position: relative; }
+    /* 数量框：始终可编辑，视觉强化 */
+    td.cell-qty input {
+      background: #f0f9ff; border-radius: 6px;
+      box-shadow: inset 0 0 0 1px #bae6fd;
+      font-weight: 600; color: #0369a1;
+    }
+    td.cell-qty input:focus {
+      background: #e0f2fe; box-shadow: inset 0 0 0 2px var(--accent);
+    }
+    td.cell-qty input::placeholder { color: #7dd3fc; }
+    /* 删除按钮长按反馈 */
+    .ops .del.pressing {
+      background: var(--danger-soft); color: var(--danger);
+      transform: scale(.9);
+    }
+    .ops .del { transition: background .15s, color .15s, transform .12s; }
+    /* 空状态 */
+    .empty-row td {
+      text-align: center; padding: 40px 16px; color: var(--muted);
+      font-size: 13.5px; background: var(--card);
+    }
+    /* Toast 轻提示 */
+    .toast {
+      position: fixed; left: 50%; bottom: 28px;
+      transform: translate(-50%, 20px);
+      background: #1f2937; color: #fff;
+      font-size: 13px; padding: 10px 18px; border-radius: 999px;
+      box-shadow: 0 6px 22px rgba(16, 24, 40, .28);
+      opacity: 0; pointer-events: none;
+      transition: opacity .2s, transform .2s;
+      z-index: 9999; max-width: 86vw; text-align: center;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .toast.warn { background: #b45309; }
+    .toast.error { background: #b91c1c; }
     .hint { color: var(--muted); font-size: 12px; margin-top: 14px; line-height: 1.8; }
     .hint kbd {
       font-family: inherit; font-size: 11px; background: #fff;
@@ -287,6 +364,18 @@
       .hint { font-size: 11.5px; line-height: 1.9; }
       .bulk-panel { padding: 12px; }
       .bulk-actions button { flex: 1; }
+      /* v2 移动端适配 */
+      .search-bar { margin-bottom: 12px; padding: 0 10px; }
+      #search-input { font-size: 14px; padding: 11px 0; }
+      .toolbar button { flex: 1 1 auto; min-width: calc(50% - 4px); }
+      .toolbar button#export-btn { min-width: 100%; }
+      td.cell-lock.unlocked::after { top: 0; right: 4px; font-size: 8.5px; }
+      tbody td.cell-qty input {
+        font-size: 16px; padding: 9px 10px;
+        background: #f0f9ff;
+      }
+      .toast { bottom: 84px; font-size: 12.5px; padding: 9px 16px; }
+      .empty-row td { padding: 32px 12px; font-size: 13px; }
     }
   </style>
 </head>
@@ -299,9 +388,16 @@
     <div class="toolbar">
       <button id="add-btn">＋ 添加类目</button>
       <button id="bulk-btn">批量添加</button>
+      <button id="clear-qty-btn" class="warn-btn" title="清空所有数量，保留名称/单价/单位">↺ 清空数量</button>
+      <button id="undo-btn" title="撤销上一步（Ctrl+Z）" disabled>↶ 撤销</button>
       <button id="export-btn">导出 CSV</button>
       <span class="spacer"></span>
       <span class="count-badge">共 <b id="row-count">0</b> 个类目</span>
+    </div>
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input id="search-input" type="search" placeholder="搜索类目名称…" autocomplete="off" aria-label="搜索类目">
+      <span id="search-info" class="search-info" hidden></span>
     </div>
     <div class="bulk-panel" id="bulk-panel" hidden>
       <textarea id="bulk-input" placeholder="每行一个类目名；或从 Excel 复制「名称 → 单价 → 数量」三列后粘贴（制表符分隔）"></textarea>
@@ -341,6 +437,7 @@
       按 <kbd>Enter</kbd> 快速跳到下一格，在最后一格按 <kbd>Enter</kbd> 自动新增一行。
     </p>
   </main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script type="module" src="./main.js"></script>
 </body>
 </html>

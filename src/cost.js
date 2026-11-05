@@ -82,6 +82,143 @@ export function addItems(items, drafts) {
   return [...items, ...drafts.map((d) => createItem(d))];
 }
 
+// ---------- v2 新增 ----------
+
+// 安全解析四则运算表达式：支持 + - * / × ÷ 全角括号与空格
+// 非法表达式返回 null（不抛异常），结果四舍五入到 2 位小数
+export function evalExpression(input) {
+  if (input === null || input === undefined) return null;
+  let s = String(input).trim();
+  if (!s) return null;
+  // 全角转半角
+  s = s
+    .replace(/[×✕]/g, '*')
+    .replace(/[÷]/g, '/')
+    .replace(/[（]/g, '(')
+    .replace(/[）]/g, ')')
+    .replace(/[＋]/g, '+')
+    .replace(/[－—]/g, '-')
+    .replace(/[＊]/g, '*')
+    .replace(/[／]/g, '/')
+    .replace(/\s+/g, '');
+  // 只允许数字、小数点、运算符、括号
+  if (!/^[0-9+\-*/().]+$/.test(s)) return null;
+  // 纯数字直接返回
+  if (/^[0-9.]+$/.test(s)) {
+    const n = Number(s);
+    return Number.isFinite(n) ? round2(n) : null;
+  }
+  // 用递归下降解析，避免 eval 的安全与性能问题
+  let pos = 0;
+  function peek() { return s[pos]; }
+  // allowUnary：仅在表达式开头或左括号后允许一元正负号
+  function parseExpr(allowUnary = true) {
+    let v = parseTerm(allowUnary);
+    if (v === null) return null;
+    while (peek() === '+' || peek() === '-') {
+      const op = s[pos++];
+      const r = parseTerm(false); // 二元运算符后禁止一元符号
+      if (r === null) return null;
+      v = op === '+' ? v + r : v - r;
+    }
+    return v;
+  }
+  function parseTerm(allowUnary = false) {
+    let v = parseFactor(allowUnary);
+    if (v === null) return null;
+    while (peek() === '*' || peek() === '/') {
+      const op = s[pos++];
+      const r = parseFactor(false); // 乘除后禁止一元符号
+      if (r === null) return null;
+      if (op === '/' && r === 0) return null; // 除零视为非法
+      v = op === '*' ? v * r : v / r;
+    }
+    return v;
+  }
+  function parseFactor(allowUnary = false) {
+    if (peek() === '(') {
+      pos++;
+      const v = parseExpr(true);
+      if (v === null) return null;
+      if (peek() !== ')') return null;
+      pos++;
+      return v;
+    }
+    // 一元符号：只有 allowUnary 时才接受，且只允许一个
+    let sign = 1;
+    if (allowUnary && (peek() === '-' || peek() === '+')) {
+      if (s[pos++] === '-') sign = -1;
+      if (peek() !== '(' && !/[0-9.]/.test(peek() ?? '')) return null;
+    }
+    const start = pos;
+    while (pos < s.length && /[0-9.]/.test(s[pos])) pos++;
+    if (pos === start) return null;
+    const numStr = s.slice(start, pos);
+    // 拒绝多个小数点
+    if ((numStr.match(/\./g) || []).length > 1) return null;
+    const n = Number(numStr);
+    if (!Number.isFinite(n)) return null;
+    return sign * n;
+  }
+  const result = parseExpr();
+  if (result === null) return null;
+  if (pos !== s.length) return null; // 有剩余字符说明表达式非法
+  if (!Number.isFinite(result)) return null;
+  return round2(result);
+}
+
+// 清空所有数量，保留名称/单价/单位（纯函数）
+export function clearQuantities(items) {
+  return items.map((it) => createItem({ ...it, quantity: 0, id: it.id }));
+}
+
+// 找出重复的类目名称（忽略空名称与首尾空白）
+// 传入 extraName 时，额外检查该名称是否与已有重复
+export function findDuplicateNames(items, extraName) {
+  const seen = new Map();
+  const dups = new Set();
+  for (const it of items) {
+    const n = String(it.name ?? '').trim();
+    if (!n) continue;
+    if (seen.has(n)) dups.add(n);
+    else seen.set(n, true);
+  }
+  if (extraName !== undefined && extraName !== null) {
+    const n = String(extraName).trim();
+    if (n && seen.has(n)) dups.add(n);
+  }
+  return [...dups];
+}
+
+// 按名称关键词过滤（不区分大小写），空关键词返回全部
+export function filterItems(items, keyword) {
+  const k = String(keyword ?? '').trim().toLowerCase();
+  if (!k) return items;
+  return items.filter((it) => String(it.name ?? '').toLowerCase().includes(k));
+}
+
+// 撤销历史栈：保存最近 N 步快照
+export function createHistory(limit = 20) {
+  return { stack: [], limit };
+}
+
+// 压入快照（深拷贝，避免后续修改污染历史）
+export function pushHistory(history, items) {
+  const snapshot = JSON.parse(JSON.stringify(items));
+  const stack = [...history.stack, snapshot];
+  const limit = history.limit ?? 20;
+  if (stack.length > limit) stack.splice(0, stack.length - limit);
+  return { ...history, stack };
+}
+
+// 撤销：弹出最近快照，返回 { items, history }
+export function undoHistory(history) {
+  if (!history.stack.length) return { items: null, history };
+  const stack = history.stack.slice(0, -1);
+  const items = history.stack[history.stack.length - 1];
+  return { items, history: { ...history, stack } };
+}
+
 // 解析批量文本：每行一个类目名；或从 Excel 粘贴「名称→单价→数量」三列（制表符分隔）
 export function parseBulk(text) {
   return String(text ?? '')
