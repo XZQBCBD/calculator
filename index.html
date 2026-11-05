@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#3b82f6">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="成本核算">
+  <title>自定义类目成本核算</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233b82f6'/%3E%3Ctext x='16' y='23' font-size='19' font-family='sans-serif' font-weight='700' fill='white' text-anchor='middle'%3E%C2%A5%3C/text%3E%3C/svg%3E">
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --border-soft: #f0f2f5;
+      --text: #1f2937;
+      --text-body: #374151;
+      --muted: #9ca3af;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --accent-soft: #eff6ff;
+      --accent-ring: rgba(59, 130, 246, .16);
+      --danger: #ef4444;
+      --danger-soft: #fef2f2;
+      --head-bg: #f9fafb;
+      --total-bg: #eff6ff;
+      --row-hover: #fbfcfe;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -webkit-text-size-adjust: 100%;
+    }
+    main { max-width: 1040px; margin: 0 auto; padding: 36px 20px 72px; }
+    .page-head { margin-bottom: 22px; }
+    h1 {
+      font-size: 22px; font-weight: 700; letter-spacing: -.2px;
+      margin: 0 0 6px; color: var(--text);
+      display: flex; align-items: center; gap: 9px;
+    }
+    h1::before {
+      content: ""; width: 4px; height: 20px; border-radius: 2px;
+      background: linear-gradient(180deg, var(--accent), #60a5fa);
+      display: inline-block; flex: none;
+    }
+    .sub { color: var(--muted); font-size: 13px; margin: 0; }
+    .toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+    button {
+      font: inherit; font-size: 13.5px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      border-radius: 8px;
+      padding: 8px 15px;
+      cursor: pointer;
+      color: var(--text-body);
+      transition: background .16s, border-color .16s, color .16s, box-shadow .16s, transform .06s;
+      white-space: nowrap;
+      -webkit-tap-highlight-color: transparent;
+    }
+    button:hover { border-color: #cfd6e0; background: #fcfdff; }
+    button:active { transform: translateY(1px); }
+    button:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-ring); }
+    #add-btn {
+      background: var(--accent); color: #fff; border-color: var(--accent);
+      font-weight: 600;
+      box-shadow: 0 1px 2px rgba(59, 130, 246, .28);
+    }
+    #add-btn:hover {
+      background: var(--accent-hover); border-color: var(--accent-hover);
+      color: #fff; box-shadow: 0 3px 10px rgba(59, 130, 246, .32);
+    }
+    .toolbar .spacer { flex: 1 1 auto; }
+    .count-badge {
+      font-size: 12px; color: var(--muted);
+      background: #fff; border: 1px solid var(--border);
+      border-radius: 999px; padding: 5px 12px;
+      font-variant-numeric: tabular-nums;
+    }
+    .count-badge b { color: var(--accent); font-weight: 600; }
+    .bulk-panel {
+      margin-bottom: 16px; background: var(--card);
+      border: 1px solid var(--border); border-radius: 12px; padding: 14px;
+      box-shadow: 0 1px 3px rgba(16, 24, 40, .04);
+      animation: slideDown .18s ease-out;
+    }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .bulk-panel textarea {
+      width: 100%; border: 1px solid var(--border); border-radius: 8px;
+      padding: 11px 13px; font: inherit; font-size: 13.5px;
+      resize: vertical; min-height: 100px; color: var(--text-body);
+      transition: border-color .16s, box-shadow .16s;
+      line-height: 1.7;
+    }
+    .bulk-panel textarea:focus {
+      outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring);
+    }
+    .bulk-panel textarea::placeholder { color: #c1c7d0; }
+    .bulk-actions { margin-top: 11px; display: flex; gap: 8px; }
+    .bulk-actions .primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+    .bulk-actions .primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: #fff; }
+    .table-wrap {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(16, 24, 40, .05), 0 1px 2px rgba(16, 24, 40, .03);
+    }
+    .table-scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 780px; }
+    th, td { padding: 0; text-align: center; }
+    thead th {
+      font-size: 12px; color: #6b7280; font-weight: 600;
+      padding: 12px 10px; background: var(--head-bg);
+      border-bottom: 1px solid var(--border);
+      letter-spacing: .3px; white-space: nowrap;
+    }
+    tbody td { border-bottom: 1px solid var(--border-soft); }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr { transition: background .13s; }
+    tbody tr:hover td { background: var(--row-hover); }
+    input {
+      width: 100%; border: none; outline: none; font: inherit; font-size: 13.5px;
+      padding: 12px 10px; background: transparent; text-align: center;
+      color: var(--text-body);
+      transition: background .15s, box-shadow .15s;
+      -webkit-appearance: none; appearance: none;
+    }
+    input:focus { background: var(--accent-soft); box-shadow: inset 0 -2px 0 var(--accent); }
+    input::placeholder { color: #c8cdd6; }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type="number"] { -moz-appearance: textfield; }
+    .unit input { color: #6b7280; font-size: 13px; }
+    .num, .subtotal, .total-num { font-variant-numeric: tabular-nums; }
+    .subtotal { padding: 12px 10px; font-weight: 600; color: var(--text); }
+    .subtotal.zero { color: #c1c7d0; font-weight: 500; }
+    .total-num { padding: 14px 12px; }
+    .drag { width: 40px; }
+    .drag-handle {
+      cursor: grab; user-select: none; font-size: 15px; color: #cbd2dc;
+      display: inline-block; padding: 4px 6px; border-radius: 5px;
+      transition: color .15s, background .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .drag-handle:hover { color: var(--accent); background: var(--accent-soft); }
+    .drag-handle:active { cursor: grabbing; }
+    tr.dragging { opacity: .4; }
+    tr.dragging td { background: var(--accent-soft) !important; }
+    tr.drag-over td { box-shadow: inset 0 2px 0 var(--accent); }
+    .ops { white-space: nowrap; width: 88px; }
+    .ops button {
+      border: none; background: none; color: #b6bdc8;
+      padding: 6px 8px; border-radius: 6px; font-size: 15px; line-height: 1;
+      transition: background .15s, color .15s;
+    }
+    .ops button:hover { background: var(--accent-soft); color: var(--accent); }
+    .ops .del:hover { background: var(--danger-soft); color: var(--danger); }
+    tfoot th, tfoot td {
+      padding: 15px 12px; background: var(--total-bg);
+      border-top: 1px solid #dbeafe;
+    }
+    tfoot th {
+      color: var(--text); font-size: 14px; font-weight: 700; letter-spacing: .2px;
+      text-align: center;
+    }
+    tfoot .total-num {
+      font-weight: 700; font-size: 19px; color: var(--accent);
+      letter-spacing: -.3px;
+    }
+    .hint { color: var(--muted); font-size: 12px; margin-top: 14px; line-height: 1.8; }
+    .hint kbd {
+      font-family: inherit; font-size: 11px; background: #fff;
+      border: 1px solid var(--border); border-bottom-width: 2px;
+      border-radius: 4px; padding: 1px 5px; color: #6b7280;
+    }
+    /* ================= 移动端：表格转卡片 ================= */
+    @media (max-width: 720px) {
+      main { padding: 20px 12px 56px; }
+      h1 { font-size: 19px; }
+      .sub { font-size: 12px; line-height: 1.6; }
+      .toolbar { gap: 8px; }
+      button { padding: 9px 14px; font-size: 13.5px; }
+      .count-badge { order: -1; width: 100%; text-align: center; box-sizing: border-box; }
+      .table-wrap { background: transparent; border: none; box-shadow: none; overflow: visible; }
+      .table-scroll { overflow: visible; }
+      table { min-width: 0; width: 100%; display: block; }
+      thead { display: none; }
+      tbody { display: block; }
+      tfoot { display: block; }
+      tbody tr {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        margin-bottom: 10px;
+        padding: 6px 8px 8px;
+        box-shadow: 0 1px 2px rgba(16, 24, 40, .04);
+        position: relative;
+      }
+      tbody tr:hover td { background: transparent; }
+      tbody td { border-bottom: none; display: block; }
+      tbody td.drag {
+        position: absolute; top: 4px; right: 4px;
+        width: auto; z-index: 2;
+      }
+      .drag-handle { font-size: 17px; padding: 6px 8px; }
+      tbody td:nth-child(2) { grid-column: 1 / -1; }
+      tbody td:nth-child(2) input,
+      tbody td:nth-child(3) input,
+      tbody td:nth-child(5) input { text-align: center; }
+      tbody td:nth-child(2)::before,
+      tbody td:nth-child(3)::before,
+      tbody td:nth-child(4)::before,
+      tbody td:nth-child(5)::before,
+      tbody td:nth-child(6)::before {
+        display: block;
+        font-size: 10.5px;
+        color: var(--muted);
+        letter-spacing: .3px;
+        padding: 6px 10px 0;
+        font-weight: 600;
+        text-align: center;
+      }
+      tbody td:nth-child(2)::before { content: "名称"; }
+      tbody td:nth-child(3)::before { content: "单价"; }
+      tbody td:nth-child(4)::before { content: "单价单位"; }
+      tbody td:nth-child(5)::before { content: "数量"; }
+      tbody td:nth-child(6)::before { content: "数量单位"; }
+      tbody td:nth-child(2) input { font-size: 15px; font-weight: 600; padding-top: 4px; }
+      tbody td input { padding: 7px 10px; font-size: 14px; }
+      tbody td input:focus { border-radius: 6px; box-shadow: inset 0 0 0 2px var(--accent); }
+      tbody td.subtotal {
+        grid-column: 1 / -1;
+        text-align: center;
+        font-size: 16px;
+        padding: 8px 10px 2px;
+        border-top: 1px dashed var(--border);
+        margin-top: 6px;
+      }
+      tbody td.subtotal::before {
+        content: "小计 ";
+        font-size: 11.5px;
+        color: var(--muted);
+        font-weight: 500;
+      }
+      tbody td.ops {
+        grid-column: 1 / -1;
+        text-align: center;
+        width: auto;
+        padding-top: 4px;
+      }
+      .ops button { font-size: 16px; padding: 6px 9px; }
+      tfoot tr {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--total-bg);
+        border: 1px solid #dbeafe;
+        border-radius: 12px;
+        padding: 14px 16px;
+        margin-top: 4px;
+        position: sticky;
+        bottom: 10px;
+        box-shadow: 0 4px 14px rgba(59, 130, 246, .16);
+      }
+      tfoot th {
+        display: block; padding: 0; text-align: left;
+        font-size: 14px; border: none; background: transparent;
+      }
+      tfoot td.total-num {
+        display: block; padding: 0; border: none; background: transparent;
+        font-size: 21px;
+      }
+      tfoot td:last-child { display: none; }
+      .hint { font-size: 11.5px; line-height: 1.9; }
+      .bulk-panel { padding: 12px; }
+      .bulk-actions button { flex: 1; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="page-head">
+      <h1>自定义类目成本核算</h1>
+      <p class="sub">自定义成本类目，填入单价与数量，自动计算每行小计与总成本。数据保存在本地浏览器。</p>
+    </div>
+    <div class="toolbar">
+      <button id="add-btn">＋ 添加类目</button>
+      <button id="bulk-btn">批量添加</button>
+      <button id="export-btn">导出 CSV</button>
+      <span class="spacer"></span>
+      <span class="count-badge">共 <b id="row-count">0</b> 个类目</span>
+    </div>
+    <div class="bulk-panel" id="bulk-panel" hidden>
+      <textarea id="bulk-input" placeholder="每行一个类目名；或从 Excel 复制「名称 → 单价 → 数量」三列后粘贴（制表符分隔）"></textarea>
+      <div class="bulk-actions">
+        <button id="bulk-confirm" class="primary">添加</button>
+        <button id="bulk-cancel">取消</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th class="drag"></th>
+              <th style="width:25%">名称</th>
+              <th style="width:12%">单价</th>
+              <th style="width:11%">单价单位</th>
+              <th style="width:12%">数量</th>
+              <th style="width:11%">数量单位</th>
+              <th style="width:13%">小计</th>
+              <th class="ops">操作</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+          <tfoot>
+            <tr>
+              <th colspan="6">总成本</th>
+              <td class="total-num" id="total">0.00</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+    <p class="hint">
+      提示：拖动每行左侧 <b>⠿</b> 手柄可调整顺序；单价单位如「元/kg」、数量单位如「kg」可留空；
+      按 <kbd>Enter</kbd> 快速跳到下一格，在最后一格按 <kbd>Enter</kbd> 自动新增一行。
+    </p>
+  </main>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
